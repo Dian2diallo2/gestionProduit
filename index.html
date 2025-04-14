@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion de Produits</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .avatar-preview {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin: 10px auto;
+      display: block;
+    }
+    .product-item {
+      transition: all 0.3s ease;
+    }
+    .product-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    #page-content {
+      min-height: 80vh;
+      padding: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Barre de navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="#" onclick="showPage('home')">Gestion de Produits</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto" id="auth-nav">
+          <!-- Menu dynamique en fonction de la connexion -->
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Contenu principal -->
+  <div class="container" id="page-content">
+    <!-- Le contenu des pages s'affichera ici -->
+  </div>
+
+  <!-- Pied de page -->
+  <footer class="bg-dark text-white text-center py-3 mt-4">
+    <div class="container">
+      <p>&copy; 2023 Gestion de Produits</p>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // État de l'application
+    const appState = {
+      currentUser: null,
+      products: []
+    };
+
+    // 1. INSCRIPTION ET CONNEXION
+
+    // Afficher une page spécifique
+    function showPage(pageId) {
+      const pages = {
+        home: `
+          <div class="row justify-content-center">
+            <div class="col-md-8">
+              <h2 class="text-center mb-4">Bienvenue${appState.currentUser ? ', ' + appState.currentUser.username : ''} !</h2>
+              ${appState.currentUser ? `
+                <!-- Formulaire d'ajout de produit -->
+                <div class="card mb-4">
+                  <div class="card-body">
+                    <h3 class="card-title">Ajouter un produit</h3>
+                    <form id="product-form">
+                      <div class="mb-3">
+                        <input type="text" class="form-control" id="product-name" placeholder="Nom du produit" required>
+                      </div>
+                      <div class="mb-3">
+                        <input type="number" step="0.01" class="form-control" id="product-price" placeholder="Prix (€)" required>
+                      </div>
+                      <button type="submit" class="btn btn-success">Ajouter</button>
+                    </form>
+                  </div>
+                </div>
+                
+                <!-- Liste des produits -->
+                <div class="card">
+                  <div class="card-body">
+                    <h3 class="card-title">Vos produits</h3>
+                    <ul class="list-group" id="product-list"></ul>
+                  </div>
+                </div>
+              ` : `
+                <div class="alert alert-info text-center">
+                  Veuillez vous connecter pour gérer vos produits.
+                </div>
+              `}
+            </div>
+          </div>
+        `,
+        
+        login: `
+          <!-- Formulaire de connexion -->
+          <div class="row justify-content-center">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-body">
+                  <h2 class="card-title text-center mb-4">Connexion</h2>
+                  <form id="login-form">
+                    <div class="mb-3">
+                      <input type="text" class="form-control" id="login-username" placeholder="Nom d'utilisateur" required>
+                    </div>
+                    <div class="mb-3">
+                      <input type="password" class="form-control" id="login-password" placeholder="Mot de passe" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+                  </form>
+                  <div class="text-center mt-3">
+                    Pas encore inscrit ? <a href="#" onclick="showPage('signup')">S'inscrire</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `,
+        
+        signup: `
+          <!-- Formulaire d'inscription -->
+          <div class="row justify-content-center">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-body">
+                  <h2 class="card-title text-center mb-4">Inscription</h2>
+                  <form id="signup-form">
+                    <div class="mb-3">
+                      <input type="text" class="form-control" id="username" placeholder="Nom d'utilisateur" required>
+                    </div>
+                    <div class="mb-3">
+                      <input type="email" class="form-control" id="email" placeholder="Email" required>
+                    </div>
+                    <div class="mb-3">
+                      <input type="password" class="form-control" id="password" placeholder="Mot de passe" required>
+                    </div>
+                    <div class="mb-3">
+                      <input type="password" class="form-control" id="confirm-password" placeholder="Confirmer le mot de passe" required>
+                    </div>
+                    <div class="mb-3">
+                      <label for="avatar" class="form-label">Photo de profil (optionnel)</label>
+                      <input class="form-control" type="file" id="avatar" accept="image/*">
+                      <img id="preview" class="avatar-preview mt-2" src="" style="display: none;">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">S'inscrire</button>
+                  </form>
+                  <div class="text-center mt-3">
+                    Déjà un compte ? <a href="#" onclick="showPage('login')">Se connecter</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      };
+
+      document.getElementById('page-content').innerHTML = pages[pageId];
+      
+      if (pageId === 'home') {
+        if (appState.currentUser) {
+          initProductForm();
+          loadProducts();
+        }
+      } else if (pageId === 'login') {
+        initLoginForm();
+      } else if (pageId === 'signup') {
+        initSignupForm();
+      }
+    }
+
+    // Mettre à jour la navigation
+    function updateNav() {
+      const authNav = document.getElementById('auth-nav');
+      authNav.innerHTML = '';
+      
+      if (appState.currentUser) {
+        authNav.innerHTML = `
+          <li class="nav-item">
+            <span class="nav-link">Bonjour, ${appState.currentUser.username}</span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="logout()">Déconnexion</a>
+          </li>
+        `;
+      } else {
+        authNav.innerHTML = `
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showPage('login')">Connexion</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showPage('signup')">Inscription</a>
+          </li>
+        `;
+      }
+    }
+
+    // 2. GESTION DES PRODUITS
+
+    // Initialiser le formulaire de produit
+    function initProductForm() {
+      const form = document.getElementById('product-form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const name = document.getElementById('product-name').value.trim();
+          const price = parseFloat(document.getElementById('product-price').value);
+          
+          if (!name || isNaN(price) || price <= 0) {
+            alert("Veuillez entrer un nom et un prix valide.");
+            return;
+          }
+          
+          addProduct(name, price);
+          form.reset();
+        });
+      }
+    }
+
+    // Ajouter un produit
+    function addProduct(name, price) {
+      const product = {
+        id: Date.now(), // ID unique
+        name,
+        price,
+        userId: appState.currentUser.id // Lier le produit à l'utilisateur
+      };
+      
+      appState.products.push(product);
+      saveProducts();
+      renderProducts();
+      
+      // Afficher un message de confirmation
+      showAlert('success', `Produit "${name}" ajouté avec succès !`);
+    }
+
+    // Charger les produits depuis le localStorage
+    function loadProducts() {
+      const savedProducts = localStorage.getItem('products');
+      if (savedProducts) {
+        appState.products = JSON.parse(savedProducts);
+      }
+      renderProducts();
+    }
+
+    // Sauvegarder les produits dans le localStorage
+    function saveProducts() {
+      localStorage.setItem('products', JSON.stringify(appState.products));
+    }
+
+    // Afficher la liste des produits
+    function renderProducts() {
+      const productList = document.getElementById('product-list');
+      if (!productList) return;
+      
+      productList.innerHTML = '';
+      
+      // Filtrer les produits de l'utilisateur connecté
+      const userProducts = appState.products.filter(
+        p => p.userId === appState.currentUser.id
+      );
+      
+      if (userProducts.length === 0) {
+        productList.innerHTML = '<li class="list-group-item text-center">Aucun produit ajouté</li>';
+        return;
+      }
+      
+      // Afficher chaque produit
+      userProducts.forEach(product => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item product-item d-flex justify-content-between align-items-center';
+        li.innerHTML = `
+          <div>
+            <strong>${product.name}</strong> - ${product.price.toFixed(2)} €
+          </div>
+          <div>
+            <button class="btn btn-sm btn-warning me-2" onclick="editProduct(${product.id})">Modifier</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteProduct(${product.id})">Supprimer</button>
+          </div>
+        `;
+        productList.appendChild(li);
+      });
+    }
+
+    // Modifier un produit
+    function editProduct(id) {
+      const product = appState.products.find(p => p.id === id);
+      if (!product) return;
+      
+      const newName = prompt("Nouveau nom du produit :", product.name);
+      if (newName === null) return; // Si l'utilisateur annule
+      
+      const newPrice = parseFloat(prompt("Nouveau prix :", product.price));
+      if (isNaN(newPrice)) return; // Si valeur invalide
+      
+      // Mettre à jour le produit
+      product.name = newName;
+      product.price = newPrice;
+      saveProducts();
+      renderProducts();
+      
+      showAlert('info', 'Produit modifié avec succès !');
+    }
+
+    // Supprimer un produit
+    function deleteProduct(id) {
+      if (confirm("Voulez-vous vraiment supprimer ce produit ?")) {
+        const productIndex = appState.products.findIndex(p => p.id === id);
+        if (productIndex === -1) return;
+        
+        const productName = appState.products[productIndex].name;
+        appState.products.splice(productIndex, 1);
+        saveProducts();
+        renderProducts();
+        
+        showAlert('danger', `Produit "${productName}" supprimé avec succès !`);
+      }
+    }
+
+    // 3. FONCTIONS D'AUTHENTIFICATION
+
+    // Initialiser le formulaire de connexion
+    function initLoginForm() {
+      const form = document.getElementById('login-form');
+      if (!form) return;
+      
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value;
+        
+        // Récupérer les utilisateurs enregistrés
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const user = users.find(u => u.username === username && u.password === password);
+        
+        if (user) {
+          // Connexion réussie
+          appState.currentUser = user;
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          updateNav();
+          showPage('home');
+        } else {
+          alert("Nom d'utilisateur ou mot de passe incorrect.");
+        }
+      });
+    }
+
+    // Initialiser le formulaire d'inscription
+    function initSignupForm() {
+      const form = document.getElementById('signup-form');
+      const avatarInput = document.getElementById('avatar');
+      const preview = document.getElementById('preview');
+      
+      // Prévisualisation de l'avatar
+      if (avatarInput && preview) {
+        avatarInput.addEventListener('change', function() {
+          const file = avatarInput.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              preview.src = e.target.result;
+              preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+      
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const username = document.getElementById('username').value.trim();
+          const email = document.getElementById('email').value.trim();
+          const password = document.getElementById('password').value;
+          const confirmPassword = document.getElementById('confirm-password').value;
+          const avatarFile = avatarInput?.files[0];
+          
+          // Validation
+          if (!username || !email || !password || !confirmPassword) {
+            alert("Veuillez remplir tous les champs obligatoires.");
+            return;
+          }
+          
+          if (password !== confirmPassword) {
+            alert("Les mots de passe ne correspondent pas.");
+            return;
+          }
+          
+          if (password.length < 6) {
+            alert("Le mot de passe doit contenir au moins 6 caractères.");
+            return;
+          }
+          
+          // Vérifier si l'utilisateur existe déjà
+          const users = JSON.parse(localStorage.getItem('users') || '[]');
+          if (users.some(u => u.username === username)) {
+            alert("Ce nom d'utilisateur est déjà pris.");
+            return;
+          }
+          
+          // Créer le nouvel utilisateur
+          const newUser = {
+            id: Date.now(),
+            username,
+            email,
+            password
+          };
+          
+          // Gestion de l'avatar
+          if (avatarFile) {
+            const reader = new FileReader();
+            reader.onloadend = function() {
+              newUser.avatar = reader.result;
+              completeSignup(newUser, users);
+            };
+            reader.readAsDataURL(avatarFile);
+          } else {
+            completeSignup(newUser, users);
+          }
+        });
+      }
+    }
+
+    // Finaliser l'inscription
+    function completeSignup(newUser, users) {
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      appState.currentUser = newUser;
+      localStorage.setItem('currentUser', JSON.stringify(newUser));
+      
+      alert("Inscription réussie ! Vous êtes maintenant connecté.");
+      updateNav();
+      showPage('home');
+    }
+
+    // Déconnexion
+    function logout() {
+      appState.currentUser = null;
+      localStorage.removeItem('currentUser');
+      updateNav();
+      showPage('home');
+    }
+
+    // 4. FONCTIONS UTILITAIRES
+
+    // Afficher une alerte
+    function showAlert(type, message) {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+      alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      
+      const productList = document.getElementById('product-list');
+      if (productList) {
+        productList.parentNode.insertBefore(alertDiv, productList.nextSibling);
+      }
+      
+      // Supprimer l'alerte après 3 secondes
+      setTimeout(() => {
+        alertDiv.remove();
+      }, 3000);
+    }
+
+    // 5. INITIALISATION DE L'APPLICATION
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Charger l'utilisateur connecté s'il existe
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        appState.currentUser = JSON.parse(savedUser);
+      }
+      
+      // Charger les produits
+      const savedProducts = localStorage.getItem('products');
+      if (savedProducts) {
+        appState.products = JSON.parse(savedProducts);
+      }
+      
+      updateNav();
+      showPage('home');
+    });
+  </script>
+</body>
+</html>
